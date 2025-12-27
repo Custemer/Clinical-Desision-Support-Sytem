@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI-Powered Clinical Decision Support System</title>
+  <style>
+    :root{
+      --bg:#0f1115;
+      --card:#1b2130;
+      --panel:#161a22;
+      --text:#eef2ff;
+      --muted:#a8b0c0;
+      --line:#2b3244;
+      --accent:#7aa2ff;
+      --good:#3ddc97;
+      --warn:#ffcf5a;
+      --bad:#ff6b6b;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --r:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(900px 600px at 20% 0%, rgba(122,162,255,.18), transparent 50%),
+        radial-gradient(900px 700px at 90% 20%, rgba(61,220,151,.10), transparent 60%),
+        var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .topbar{
+      position:sticky;top:0;z-index:20;
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding:14px 18px;border-bottom:1px solid var(--line);
+      background:rgba(15,17,21,.75);backdrop-filter:blur(10px);
+    }
+    .brand{display:flex;gap:12px;align-items:center}
+    .mark{width:34px;height:34px;border-radius:10px;
+      background:linear-gradient(135deg, rgba(122,162,255,.9), rgba(61,220,151,.7));
+      box-shadow:var(--shadow)
+    }
+    .brand h1{margin:0;font-size:15px}
+    .brand p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+    .container{max-width:1100px;margin:18px auto;padding:0 16px 30px}
+    .footer{
+      padding:16px;text-align:center;color:var(--muted);
+      border-top:1px solid var(--line);background:rgba(15,17,21,.5)
+    }
+    .btn{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 14px;border-radius:12px;cursor:pointer;
+      transition:.15s ease;font-weight:700
+    }
+    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.10)}
+    .btn:active{transform:translateY(0)}
+    .btn.primary{border-color:rgba(122,162,255,.65);background:rgba(122,162,255,.18)}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px;border-radius:10px;font-size:13px}
+    .btn.wide{width:100%}
+    .hidden{display:none!important}
+
+    .screen{display:none}
+    .screen.active{display:block}
+
+    .card{
+      background:rgba(27,33,48,.90);
+      border:1px solid var(--line);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      padding:16px;
+    }
+    .inner{margin-top:12px;background:rgba(22,26,34,.85)}
+    .center{text-align:center}
+
+    .input,.textarea{
+      width:100%;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.25);
+      color:var(--text);
+      padding:10px 12px;border-radius:12px;outline:none;
+    }
+    .textarea{min-height:110px;resize:vertical}
+    .label{display:block;margin:10px 0;color:var(--muted);font-size:13px}
+    .hint{color:var(--muted);font-size:12px;margin:10px 0 0}
+    .row{display:flex;align-items:center}
+    .right{justify-content:flex-end}
+    .gap{gap:10px}
+    .wrap{flex-wrap:wrap}
+
+    .screen-title{
+      display:flex;align-items:flex-end;justify-content:space-between;gap:14px;
+      margin:6px 0 14px
+    }
+    .screen-title h2{margin:0;font-size:18px}
+
+    .grid{display:grid;gap:14px}
+    .grid.two{grid-template-columns:1.4fr 1fr}
+    @media(max-width:900px){
+      .grid.two{grid-template-columns:1fr}
+      .screen-title{flex-direction:column;align-items:flex-start}
+    }
+
+    .auth{max-width:420px;margin:38px auto;padding:22px}
+    .radio-row{display:flex;gap:18px;margin:8px 0 10px}
+    .radio{display:flex;gap:8px;align-items:center;font-size:14px}
+
+    .stats{grid-template-columns:repeat(4,1fr)}
+    @media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.stats{grid-template-columns:1fr}}
+    .stat{text-align:center;padding:14px}
+    .stat-title{color:var(--muted);font-size:12px}
+    .stat-value{font-size:22px;font-weight:900;margin-top:6px}
+
+    .table{margin-top:10px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+    .t-head,.t-row{
+      display:grid;grid-template-columns:1.7fr .6fr .6fr .7fr;
+      gap:10px;padding:12px;align-items:center
+    }
+    .t-head{background:rgba(0,0,0,.22);color:var(--muted);font-size:12px;font-weight:800}
+    .t-row{border-top:1px solid var(--line);background:rgba(255,255,255,.03)}
+    .t-row:hover{background:rgba(255,255,255,.06)}
+
+    .pill{
+      display:inline-block;padding:6px 10px;border-radius:999px;
+      font-weight:900;font-size:12px;border:1px solid var(--line)
+    }
+    .pill.high{background:rgba(255,107,107,.15);border-color:rgba(255,107,107,.45)}
+    .pill.med{background:rgba(255,207,90,.12);border-color:rgba(255,207,90,.45)}
+    .pill.low{background:rgba(61,220,151,.12);border-color:rgba(61,220,151,.45)}
+    .pill.warn{background:rgba(255,255,255,.06)}
+
+    .list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+    .list-item{
+      width:100%;text-align:left;
+      padding:12px 12px;border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);color:var(--text);
+      cursor:pointer;font-weight:800
+    }
+    .list-item:hover{background:rgba(255,255,255,.08)}
+    .list-item.critical{border-color:rgba(255,107,107,.55);background:rgba(255,107,107,.10)}
+
+    .bullets{margin:0;padding-left:18px;color:var(--muted)}
+    .bullets li{margin:6px 0}
+
+    .foot-notes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+    .note{
+      padding:10px 12px;border:1px solid var(--line);border-radius:14px;
+      background:rgba(0,0,0,.18);color:var(--muted);text-align:center;font-size:12px
+    }
+    @media(max-width:900px){.foot-notes{grid-template-columns:1fr}}
+
+    .kv{display:grid;grid-template-columns:.8fr 1.2fr;gap:10px 12px;margin-top:10px}
+    .k{color:var(--muted)}
+    .v{font-weight:900}
+
+    .vitals{grid-template-columns:repeat(2,1fr);margin-top:10px}
+    .mini{padding:14px;text-align:center}
+    .mini-title{color:var(--muted);font-size:12px}
+    .mini-value{font-weight:950;font-size:20px;margin-top:6px}
+    .mini-sub{color:var(--muted);font-size:12px;margin-top:4px}
+    .para{color:var(--muted);line-height:1.5;margin:8px 0 0}
+
+    .alert-box{
+      border:1px dashed rgba(255,255,255,.25);
+      border-radius:14px;padding:14px;min-height:150px;
+      background:rgba(0,0,0,.15);color:var(--muted)
+    }
+
+    .chart-placeholder{
+      display:flex;flex-direction:column;gap:10px;
+      padding:12px;border:1px dashed rgba(255,255,255,.25);
+      border-radius:14px;background:rgba(0,0,0,.12)
+    }
+    .bar{height:14px;border-radius:999px;background:linear-gradient(90deg, rgba(122,162,255,.8), rgba(61,220,151,.6))}
+    .flow{
+      display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+      padding:14px;border:1px dashed rgba(255,255,255,.25);
+      border-radius:14px;background:rgba(0,0,0,.12)
+    }
+    .flow-node{
+      padding:10px 12px;border-radius:14px;border:1px solid var(--line);
+      background:rgba(255,255,255,.04);font-weight:900
+    }
+    .flow-line{width:40px;height:2px;background:rgba(255,255,255,.2)}
+    .report-box{
+      margin-top:12px;padding:14px;border-radius:14px;
+      border:1px dashed rgba(255,255,255,.25);
+      background:rgba(0,0,0,.12);color:var(--muted);min-height:90px
+    }
+
+    .modal{
+      position:fixed;inset:0;z-index:60;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,.55);padding:16px
+    }
+    .modal-card{
+      width:min(560px,100%);
+      border-radius:18px;border:1px solid var(--line);
+      background:rgba(27,33,48,.96);box-shadow:var(--shadow)
+    }
+    .modal-head{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 14px 10px;border-bottom:1px solid var(--line)
+    }
+    .modal-head h3{margin:0;font-size:16px}
+    .modal-body{padding:14px;color:var(--muted);line-height:1.5}
+    .modal-foot{padding:12px 14px 14px;border-top:1px solid var(--line)}
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"></div>
+      <div>
+        <h1>AI-Powered Clinical Decision Support System</h1>
+        <p>Suwa Setha Hospital</p>
+      </div>
+    </div>
+    <div class="row gap">
+      <button class="btn ghost" id="btnHome">Home</button>
+      <button class="btn ghost hidden" id="btnLogout">Logout</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- LOGIN -->
+    <section id="screen-login" class="screen active">
+      <div class="card auth">
+        <h2 class="center">Secure Login</h2>
+
+        <form id="loginForm">
+          <label class="label">
+            Username / Staff ID
+            <input class="input" id="loginUser" required placeholder="e.g., D-1002 / A-2001" />
+          </label>
+
+          <label class="label">
+            Password
+            <input class="input" id="loginPass" type="password" required placeholder="••••••••" />
+          </label>
+
+          <div class="label">Role</div>
+          <div class="radio-row">
+            <label class="radio"><input type="radio" name="role" value="doctor" checked /> Doctor</label>
+            <label class="radio"><input type="radio" name="role" value="admin" /> Administrator</label>
+          </div>
+
+          <button type="button" class="btn wide" id="btnBiometric">Biometric Login (Fingerprint / Face ID)</button>
+          <button type="submit" class="btn primary wide" style="margin-top:10px;">LOGIN</button>
+
+          <p class="hint">Demo UI only (no real authentication). Choose role → Login.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- DOCTOR DASHBOARD -->
+    <section id="screen-doctor" class="screen">
+      <div class="screen-title">
+        <h2>Doctor Dashboard</h2>
+        <div class="row gap wrap">
+          <input class="input" id="patientSearch" placeholder="Search Patient" style="min-width:240px" />
+          <button class="btn" id="btnViewAlerts">View Alerts</button>
+          <button class="btn" id="btnAddNote">Add Note</button>
+        </div>
+      </div>
+
+      <div class="grid stats">
+        <div class="stat card"><div class="stat-title">High Risk</div><div class="stat-value">12</div></div>
+        <div class="stat card"><div class="stat-title">Critical Alerts</div><div class="stat-value">5</div></div>
+        <div class="stat card"><div class="stat-title">Patients Today</div><div class="stat-value">34</div></div>
+        <div class="stat card"><div class="stat-title">Avg Response Time</div><div class="stat-value">8 min</div></div>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>Assigned Patient List</h3>
+
+          <div class="table">
+            <div class="t-head">
+              <div>Patient</div><div>Risk</div><div>Alerts</div><div>Actions</div>
+            </div>
+
+            <div class="t-row" data-pid="P-1023">
+              <div><strong>P-1023</strong> | Nimal Perera</div>
+              <div><span class="pill high">HIGH</span></div>
+              <div><span class="pill warn">! 2</span></div>
+              <div><button class="btn small openProfile">Open Profile</button></div>
+            </div>
+
+            <div class="t-row" data-pid="P-1047">
+              <div><strong>P-1047</strong> | Ayesha Silva</div>
+              <div><span class="pill med">MED</span></div>
+              <div><span class="pill warn">! 0</span></div>
+              <div><button class="btn small openProfile">Open Profile</button></div>
+            </div>
+
+            <div class="t-row" data-pid="P-1102">
+              <div><strong>P-1102</strong> | Sunil Fernando</div>
+              <div><span class="pill low">LOW</span></div>
+              <div><span class="pill warn">! 1</span></div>
+              <div><button class="btn small openProfile">Open Profile</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Critical Alerts</h3>
+          <div class="list" id="criticalAlertsList">
+            <button class="list-item" data-alert="Abnormal SpO2" data-pid="P-1023">P-1023: Abnormal SpO2</button>
+            <button class="list-item" data-alert="Medication interaction warning" data-pid="P-1102">P-1102: Medication interaction warning</button>
+            <button class="list-item" data-alert="High fever trend detected" data-pid="P-1047">P-1047: High fever trend detected</button>
+          </div>
+
+          <div class="card inner">
+            <h4 style="margin:0 0 8px;">Quick Summary</h4>
+            <ul class="bullets">
+              <li>AI risk scores updated every 5 mins</li>
+              <li>Alerts prioritised by severity</li>
+              <li>One-click access to profiles</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="foot-notes">
+        <div class="note">Design goal: reduce cognitive workload</div>
+        <div class="note">AI supports doctors (does not replace them)</div>
+        <div class="note">Critical alerts shown prominently for patient safety</div>
+      </div>
+    </section>
+
+    <!-- PATIENT PROFILE -->
+    <section id="screen-profile" class="screen">
+      <div class="screen-title">
+        <h2>Patient Profile</h2>
+        <button class="btn" id="btnBackToDoctor">← Back to Dashboard</button>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>Patient Summary</h3>
+
+          <div class="kv">
+            <div class="k">Patient ID:</div><div class="v" id="pfId">P-1023</div>
+            <div class="k">Name:</div><div class="v" id="pfName">Nimal Perera</div>
+            <div class="k">Age:</div><div class="v" id="pfAge">58</div>
+            <div class="k">Gender:</div><div class="v" id="pfGender">M</div>
+            <div class="k">Ward:</div><div class="v" id="pfWard">ICU</div>
+            <div class="k">Bed:</div><div class="v" id="pfBed">12</div>
+          </div>
+
+          <div class="card inner">
+            <h4 style="margin:0 0 8px;">Clinical Notes</h4>
+            <textarea class="textarea" id="pfNotes" placeholder="Add quick clinical note..."></textarea>
+            <div class="row right gap" style="margin-top:10px;">
+              <button class="btn" id="btnSaveNote">Save Note</button>
+              <button class="btn ghost" id="btnClearNote">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Vitals & Decision Support (Demo)</h3>
+
+          <div class="grid vitals">
+            <div class="mini card">
+              <div class="mini-title">SpO2</div>
+              <div class="mini-value" id="vtSpo2">94%</div>
+              <div class="mini-sub" id="vtSpo2Hint">Monitor</div>
+            </div>
+            <div class="mini card">
+              <div class="mini-title">Temp</div>
+              <div class="mini-value" id="vtTemp">37.8°C</div>
+              <div class="mini-sub" id="vtTempHint">Slight fever</div>
+            </div>
+            <div class="mini card">
+              <div class="mini-title">HR</div>
+              <div class="mini-value" id="vtHr">98 bpm</div>
+              <div class="mini-sub" id="vtHrHint">Normal-high</div>
+            </div>
+            <div class="mini card">
+              <div class="mini-title">Risk</div>
+              <div class="mini-value" id="vtRisk">HIGH</div>
+              <div class="mini-sub" id="vtRiskHint">Review alerts</div>
+            </div>
+          </div>
+
+          <div class="card inner">
+            <h4 style="margin:0 0 8px;">AI Recommendation (Prototype)</h4>
+            <p class="para" id="aiRec">
+              Consider oxygen support assessment and repeat SpO2 check. Review medication list for interactions.
+            </p>
+            <div class="row gap" style="margin-top:10px;">
+              <button class="btn" id="btnOpenAlertsFromProfile">Open Alerts</button>
+              <button class="btn ghost" id="btnSimulateVitals">Simulate New Vitals</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section id="screen-alerts" class="screen">
+      <div class="screen-title">
+        <h2>Alert and Notification System</h2>
+        <button class="btn ghost" id="btnBackFromAlerts">← Back</button>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>Alerts</h3>
+          <div class="list">
+            <button class="list-item critical" data-alert="CRITICAL ALERT" data-pid="P-1023">CRITICAL ALERT</button>
+            <button class="list-item" data-alert="Medication Warning" data-pid="P-1102">Medication Warning</button>
+            <button class="list-item" data-alert="Vitals Alert" data-pid="P-1047">Vitals Alert</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Alert Details</h3>
+          <div class="alert-box" id="alertDetails">Select an alert to view details.</div>
+
+          <div class="row gap right" style="margin-top:12px;">
+            <button class="btn" id="btnAcknowledge">Acknowledge</button>
+            <button class="btn primary" id="btnOpenPatientFromAlert">Open Patient Profile</button>
+          </div>
+
+          <p class="hint" id="alertMeta"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN DASHBOARD -->
+    <section id="screen-admin" class="screen">
+      <div class="screen-title">
+        <div>
+          <h2>Administration Dashboard</h2>
+          <p class="hint" style="margin:4px 0 0;">Operational Overview (Prototype)</p>
+        </div>
+      </div>
+
+      <div class="grid stats">
+        <div class="stat card"><div class="stat-title">Bed Occupancy</div><div class="stat-value">78%</div></div>
+        <div class="stat card"><div class="stat-title">Staff Workload</div><div class="stat-value">Moderate</div></div>
+        <div class="stat card"><div class="stat-title">Waiting Times</div><div class="stat-value">22 min</div></div>
+        <div class="stat card"><div class="stat-title">Daily Performance</div><div class="stat-value">Good</div></div>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>Resource Utilisation Chart (Placeholder)</h3>
+          <div class="chart-placeholder">
+            <div class="bar" style="width:78%"></div>
+            <div class="bar" style="width:62%"></div>
+            <div class="bar" style="width:85%"></div>
+            <div class="bar" style="width:55%"></div>
+          </div>
+          <p class="hint">Prototype chart block (replace with real data later).</p>
+        </div>
+
+        <div class="card">
+          <h3>Patient Flow Chart (Placeholder)</h3>
+          <div class="flow">
+            <div class="flow-node">Triage</div><div class="flow-line"></div>
+            <div class="flow-node">Consult</div><div class="flow-line"></div>
+            <div class="flow-node">Labs</div><div class="flow-line"></div>
+            <div class="flow-node">Discharge</div>
+          </div>
+          <p class="hint">Prototype flow block.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Operational Reports</h3>
+        <div class="row gap wrap">
+          <button class="btn" id="btnDailyReport">Daily Summary Report</button>
+          <button class="btn" id="btnWeeklyReport">Weekly Performance Report</button>
+          <button class="btn" id="btnResourceReport">Resource Allocation Report</button>
+        </div>
+        <div class="report-box" id="reportBox">Click a report to preview.</div>
+      </div>
+    </section>
+
+    <!-- MODAL -->
+    <div class="modal hidden" id="modal">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3 id="modalTitle">Modal</h3>
+          <button class="btn ghost" id="btnCloseModal">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-foot row right gap">
+          <button class="btn" id="btnModalOk">OK</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    Prototype UI • Emerging Technologies (Unit 47) • Suwa Setha Hospital
+  </footer>
+
+  <script>
+    // ===== SPA navigation =====
+    const screens = {
+      login: document.getElementById("screen-login"),
+      doctor: document.getElementById("screen-doctor"),
+      profile: document.getElementById("screen-profile"),
+      alerts: document.getElementById("screen-alerts"),
+      admin: document.getElementById("screen-admin"),
+    };
+
+    const btnLogout = document.getElementById("btnLogout");
+    const btnHome = document.getElementById("btnHome");
+
+    let navStack = ["login"];
+    let currentRole = null;
+    let selectedPatientId = "P-1023";
+    let selectedAlert = null;
+
+    function show(screenName){
+      Object.values(screens).forEach(s => s.classList.remove("active"));
+      screens[screenName].classList.add("active");
+      if(screenName === "login") btnLogout.classList.add("hidden");
+      else btnLogout.classList.remove("hidden");
+    }
+    function go(screenName){
+      navStack.push(screenName);
+      show(screenName);
+    }
+    function back(){
+      if(navStack.length > 1) navStack.pop();
+      show(navStack[navStack.length - 1]);
+    }
+
+    btnLogout.addEventListener("click", () => {
+      navStack = ["login"];
+      currentRole = null;
+      show("login");
+    });
+
+    btnHome.addEventListener("click", () => {
+      if(!currentRole) return show("login");
+      if(currentRole === "doctor"){ navStack = ["doctor"]; show("doctor"); }
+      else { navStack = ["admin"]; show("admin"); }
+    });
+
+    // ===== Modal =====
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+    const btnCloseModal = document.getElementById("btnCloseModal");
+    const btnModalOk = document.getElementById("btnModalOk");
+
+    function openModal(title, html){
+      modalTitle.textContent = title;
+      modalBody.innerHTML = html;
+      modal.classList.remove("hidden");
+    }
+    function closeModal(){ modal.classList.add("hidden"); }
+    btnCloseModal.addEventListener("click", closeModal);
+    btnModalOk.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => { if(e.target === modal) closeModal(); });
+
+    // ===== Login =====
+    document.getElementById("btnBiometric").addEventListener("click", () => {
+      openModal("Biometric Login (Demo)",
+        "Prototype UI only. Real biometric login requires secure device biometrics + hospital identity policy."
+      );
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const role = document.querySelector('input[name="role"]:checked').value;
+      currentRole = role;
+
+      if(role === "doctor"){ navStack = ["doctor"]; show("doctor"); }
+      else { navStack = ["admin"]; show("admin"); }
+    });
+
+    // ===== Doctor Dashboard =====
+    document.getElementById("btnViewAlerts").addEventListener("click", () => go("alerts"));
+    document.getElementById("btnAddNote").addEventListener("click", () => {
+      openModal("Add Note (Prototype)",
+        "<p>Add a clinical note in the real system.</p><p><strong>Demo:</strong> Use Patient Profile → Clinical Notes → Save Note.</p>"
+      );
+    });
+
+    // Search filter
+    document.getElementById("patientSearch").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      document.querySelectorAll("#screen-doctor .t-row").forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? "grid" : "none";
+      });
+    });
+
+    // Open profile buttons
+    document.querySelectorAll(".openProfile").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const row = e.target.closest(".t-row");
+        openPatient(row.getAttribute("data-pid"));
+      });
+    });
+
+    // Critical alerts quick open
+    document.getElementById("criticalAlertsList").addEventListener("click", (e) => {
+      if(!e.target.classList.contains("list-item")) return;
+      const pid = e.target.getAttribute("data-pid");
+      const text = e.target.getAttribute("data-alert");
+      selectedAlert = { title:text, pid };
+      go("alerts");
+      loadAlertDetails(text, pid);
+    });
+
+    // ===== Patient Profile data =====
+    const patientDB = {
+      "P-1023": { name:"Nimal Perera", age:58, gender:"M", ward:"ICU", bed:"12", risk:"HIGH" },
+      "P-1047": { name:"Ayesha Silva", age:41, gender:"F", ward:"General", bed:"03", risk:"MED" },
+      "P-1102": { name:"Sunil Fernando", age:66, gender:"M", ward:"Cardio", bed:"08", risk:"LOW" },
+    };
+
+    function openPatient(pid){
+      selectedPatientId = pid;
+      const p = patientDB[pid] || patientDB["P-1023"];
+      document.getElementById("pfId").textContent = pid;
+      document.getElementById("pfName").textContent = p.name;
+      document.getElementById("pfAge").textContent = p.age;
+      document.getElementById("pfGender").textContent = p.gender;
+      document.getElementById("pfWard").textContent = p.ward;
+      document.getElementById("pfBed").textContent = p.bed;
+      document.getElementById("vtRisk").textContent = p.risk;
+      go("profile");
+    }
+
+    document.getElementById("btnBackToDoctor").addEventListener("click", back);
+    document.getElementById("btnOpenAlertsFromProfile").addEventListener("click", () => go("alerts"));
+
+    document.getElementById("btnSaveNote").addEventListener("click", () => {
+      const t = document.getElementById("pfNotes").value.trim();
+      if(!t) return openModal("Save Note","Please type a note first.");
+      openModal("Saved (Demo)", `Note saved for <strong>${selectedPatientId}</strong>:<br><br>${escapeHtml(t)}`);
+    });
+
+    document.getElementById("btnClearNote").addEventListener("click", () => {
+      document.getElementById("pfNotes").value = "";
+    });
+
+    document.getElementById("btnSimulateVitals").addEventListener("click", () => {
+      const spo2 = randInt(86, 99);
+      const temp = (randInt(365, 401) / 10).toFixed(1);
+      const hr = randInt(70, 132);
+
+      document.getElementById("vtSpo2").textContent = spo2 + "%";
+      document.getElementById("vtTemp").textContent = temp + "°C";
+      document.getElementById("vtHr").textContent = hr + " bpm";
+
+      document.getElementById("vtSpo2Hint").textContent = spo2 < 92 ? "Low SpO2" : "Monitor";
+      document.getElementById("vtTempHint").textContent = temp >= 38.0 ? "Fever" : "Normal";
+      document.getElementById("vtHrHint").textContent = hr >= 110 ? "High HR" : "Normal-high";
+
+      const rec = [];
+      if(spo2 < 92) rec.push("Repeat SpO2 immediately and consider oxygen support assessment.");
+      if(temp >= 38.0) rec.push("Monitor fever trend and evaluate infection markers.");
+      if(hr >= 110) rec.push("Check hydration/pain/anxiety and review vitals in 10 minutes.");
+      if(rec.length === 0) rec.push("Continue routine monitoring. No immediate action required.");
+
+      document.getElementById("aiRec").textContent = rec.join(" ");
+    });
+
+    // ===== Alerts =====
+    document.getElementById("btnBackFromAlerts").addEventListener("click", back);
+
+    const alertDetails = document.getElementById("alertDetails");
+    const alertMeta = document.getElementById("alertMeta");
+
+    document.querySelectorAll("#screen-alerts .list-item").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const title = btn.getAttribute("data-alert");
+        const pid = btn.getAttribute("data-pid");
+        selectedAlert = { title, pid };
+        loadAlertDetails(title, pid);
+      });
+    });
+
+    function loadAlertDetails(title, pid){
+      const time = new Date().toLocaleString();
+      alertDetails.innerHTML = `
+        <div><strong>${escapeHtml(title)}</strong></div>
+        <div style="margin-top:8px;">
+          Patient: <strong>${escapeHtml(pid)}</strong><br>
+          Severity: <strong>${title.includes("CRITICAL") ? "CRITICAL" : "HIGH"}</strong><br>
+          Suggested action: <strong>Review vitals + medication list</strong>
+        </div>
+        <div style="margin-top:10px;">
+          Prototype alert detail panel. Real system includes evidence summary + audit logs + action tracking.
+        </div>
+      `;
+      alertMeta.textContent = "Loaded: " + time;
+    }
+
+    document.getElementById("btnAcknowledge").addEventListener("click", () => {
+      if(!selectedAlert) return openModal("Acknowledge","Select an alert first.");
+      openModal("Acknowledged (Demo)", `Alert for <strong>${selectedAlert.pid}</strong> acknowledged.`);
+    });
+
+    document.getElementById("btnOpenPatientFromAlert").addEventListener("click", () => {
+      const pid = (selectedAlert && selectedAlert.pid) ? selectedAlert.pid : (selectedPatientId || "P-1023");
+      openPatient(pid);
+    });
+
+    // ===== Admin Reports =====
+    const reportBox = document.getElementById("reportBox");
+
+    document.getElementById("btnDailyReport").addEventListener("click", () => {
+      reportBox.innerHTML = `
+        <strong>Daily Summary Report (Prototype)</strong><br><br>
+        • Bed occupancy: 78%<br>
+        • Average waiting time: 22 min<br>
+        • Critical alerts handled: 17<br>
+        • Staffing note: ICU needs 1 additional nurse for evening shift
+      `;
+    });
+
+    document.getElementById("btnWeeklyReport").addEventListener("click", () => {
+      reportBox.innerHTML = `
+        <strong>Weekly Performance Report (Prototype)</strong><br><br>
+        • Avg wait time improved by 9%<br>
+        • Readmission rate stable<br>
+        • Alert precision improved after feedback iteration<br>
+        • Training: medication interaction review workshop
+      `;
+    });
+
+    document.getElementById("btnResourceReport").addEventListener("click", () => {
+      reportBox.innerHTML = `
+        <strong>Resource Allocation Report (Prototype)</strong><br><br>
+        • ICU oxygen usage: high<br>
+        • Lab capacity: moderate<br>
+        • Suggest: allocate extra mobile vitals device to triage<br>
+        • Suggest: adjust OPD staffing at peak hours
+      `;
+    });
+
+    // ===== Utils =====
+    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, m => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+      }[m]));
+    }
+
+    // Start in login
+    show("login");
+  </script>
+</body>
+</html>
